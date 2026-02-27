@@ -7,7 +7,7 @@ Inicializar();
 function Inicializar() {
 
     token = localStorage.getItem("token");
-    console.log("Token al iniciar:", token);
+
     OcultarPantallas();
     listarTodosPaises();
     ListarCategoriasPeliculas();
@@ -15,10 +15,10 @@ function Inicializar() {
 
     if (token) {
         MostrarMenuLogueado();
-        window.location.hash = "/";
+        ruteo.push("/");
     } else {
         mostrarMenuNoLogeado();
-        window.location.hash = "/Login";
+        ruteo.push("/Login");
     }
 }
 
@@ -38,7 +38,7 @@ function AgregarEventos() {
 function VerificarSesion() {
     if (!token || token === "null") {
         mostrarMensaje("Debe iniciar sesión");
-        window.location.hash = "/Login";
+        ruteo.push("/Login");
         return false;
     }
     return true;
@@ -175,6 +175,8 @@ async function Registro() {
             mostrarMensaje(data.mensaje || "Error en el registro");
             return;
         }
+        ruteo.push("/")
+        
         mostrarMensaje("Registro exitoso!");
         // localStorage.setItem("token", data.token);
         // console.log(localStorage.getItem("token"))
@@ -241,13 +243,12 @@ async function login() {
 
         localStorage.setItem("token", data.token);
         token = data.token;
-        console.log(data.json);
         document.querySelector("#InpUsuarioLogin").value = "";
         document.querySelector("#InpPWDLogin").value = "";
         MostrarMenuLogueado();
         mostrarMensaje("Bienvenido!");
 
-        window.location.hash = "/";
+        ruteo.push("/");
     } catch (error) {
         console.log("Error en el login", error);
         mostrarMensaje("Error de conexion");

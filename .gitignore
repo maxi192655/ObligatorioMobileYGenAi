@@ -1,0 +1,17 @@
+# Node
+node_modules/
+
+# Android build
+android/.gradle/
+android/build/
+android/app/build/
+
+# Capacitor generated
+android/app/src/main/assets/public/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log*
