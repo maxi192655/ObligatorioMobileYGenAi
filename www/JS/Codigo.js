@@ -5,6 +5,8 @@ const menu = document.querySelector("#menu");
 let latitud;
 let longitud;
 let map;
+let Peliculas = [];
+
 // window.addEventListener("load", Inicializar);
 Inicializar();
 // #region Inicializacion de la app y navegacion
@@ -259,19 +261,48 @@ async function ListarPeliculas() {
         }
 
         const data = await response.json();
-        let peliculas = data.peliculas;
 
         if (!response.ok) {
             mostrarMensaje(data.error || "Error al cargar la lista de peliculas");
             return;
         }
 
-        let cards = '';
+        Peliculas = data.peliculas;
 
-        peliculas.forEach((pelicula) => {
+        const sltFiltro = document.querySelector("#SltFiltroFecha").value;
+        let peliculasAMostrar = Peliculas;
+
+        if (sltFiltro && sltFiltro !== "todas") {
+            const hoy = new Date();
+
+            peliculasAMostrar = Peliculas.filter(p => {
+                const fechaPelicula = new Date(p.fechaEstreno);
+
+                if (sltFiltro === "semana") {
+                    const limite = new Date();
+                    limite.setDate(hoy.getDate() - 7);
+                    return fechaPelicula >= limite;
+                }
+
+                if (sltFiltro === "mes") {
+                    const limite = new Date();
+                    limite.setMonth(hoy.getMonth() - 1);
+                    return fechaPelicula >= limite;
+                }
+                return true;
+            });
+
+        }
+
+        // console.log(peliculasAMostrar);
+        // console.log(sltFiltro);
+        let cards = `
+                    <ion-grid>
+                        <ion-row>
+                    `;
+        peliculasAMostrar.forEach(pelicula => {
             let IdCat = pelicula.idCategoria
             let FindCat = CatPeliculas.find(c => c.id == IdCat)
-            console.log(FindCat);
             let CatNombre = "";
             let CatEmoji = "";
             if (FindCat) {
@@ -307,46 +338,45 @@ async function ListarPeliculas() {
 `;
         })
 
-
+ cards += `
+        </ion-row>
+    </ion-grid>
+`;
         document.querySelector("#ListaPeliculas").innerHTML = cards;
         // container.innerHTML = '';
 
     } catch (error) {
         mostrarMensaje("Error cargando lista de pelicula" || error);
-        console.log(error)
+        // console.log(error)
     }
 }
-
 
 async function EliminarPelicula(id) {
     try {
         if (!VerificarSesion()) return;
-        const response = await fetch(URL_Base + '/peliculas', {
+        const response = await fetch(URL_Base + '/peliculas/' + id, {
             method: "DELETE",
             headers: {
                 'Content-Type': 'application/json',
                 "Authorization": `Bearer ${token}`
             }
         });
-        
 
-
+        const data = await response.json();
         if (response.status === 401) {
             mostrarMensaje("Sesión expirada. Inicie sesión nuevamente.");
             Logout();
             return;
         }
-
-        const data = await response.json();
-        let peliculas = data.peliculas;
-
+        // console.log(data)
         if (!response.ok) {
             mostrarMensaje(data.error || "Error intentar eliminar una pelicula");
             return;
         }
+        mostrarMensaje(data.mensaje);
+        ListarPeliculas();
     } catch (error) {
-        mostrarMensaje("Error Al intentar eliminar una pelicula" || error);
-        console.log(error)
+        mostrarMensaje("Error de conexion" || error);
     }
 }
 //#endregion
@@ -365,16 +395,26 @@ function navegar(evt) {
             document.querySelector("#page-Login").style.display = "block";
             break;
         case "/Registro":
-            listarTodosPaises();
             document.querySelector("#page-Registro").style.display = "block";
+            listarTodosPaises();
             break;
         case "/AgregarUnaPelícula":
-            ListarCategoriasPeliculas();
             document.querySelector("#page-AltaPelicula").style.display = "block";
+            ListarCategoriasPeliculas();
             break;
         case "/ListarPeliculas":
-            ListarPeliculas();
             document.querySelector("#page-ListarPeliculas").style.display = "block";
+            // ListarPeliculas();
+            setTimeout(() => {
+                ListarPeliculas();
+
+                const select = document.querySelector("#SltFiltroFecha");
+
+                select.addEventListener("ionChange", () => {
+                    ListarPeliculas();
+                });
+
+            }, 50);
             break;
         case "/MapaUsuarios":
             // MostrarMapaUsuarios();

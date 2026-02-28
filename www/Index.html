@@ -182,15 +182,22 @@
                     <ion-buttons slot="start">
                         <ion-menu-button></ion-menu-button>
                     </ion-buttons>
-                    <ion-title>Listado de pelicula</ion-title>
+                    <ion-title slot="start">Listado de pelicula</ion-title>
+                    
                 </ion-toolbar>
             </ion-header>
-            <ion-content id="ListaPeliculas">
-                <!-- <ion-list>
-                    <ion-list>
-                        
-                    </ion-list>
-                </ion-list> -->
+            <ion-content >
+                <ion-item lines="none" class="filtro-item">
+                    <ion-icon name="filter-outline" slot="start"></ion-icon>
+                    <ion-label position="stacked">Filtrar por fecha</ion-label>
+                    <ion-select id="SltFiltroFecha" interface="popover" onchange="ListarPeliculas()">
+                        <ion-select-option value="todas">Todas</ion-select-option>
+                        <ion-select-option value="semana">Última semana</ion-select-option>
+                        <ion-select-option value="mes">Último mes</ion-select-option>
+                    </ion-select>
+                </ion-item>
+
+                <div id="ListaPeliculas"></div>
             </ion-content>
         </ion-page>
         <ion-page class="ion-page" id="page-Mapa">
