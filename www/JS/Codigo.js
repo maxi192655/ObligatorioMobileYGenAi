@@ -128,10 +128,10 @@ async function ListarCategoriasPeliculas() {
 
 async function AgregarPeliculas() {
     try {
-        const idCat = document.querySelector("#SltCategorias").value;
-        const pelicula = document.querySelector("#InpPeliculaAgregar").value;
-        const fecha = document.querySelector("#InpFechaPelAgregar").value;
-        const inpComentario = document.querySelector("#InpComentario").value;
+        let idCat = document.querySelector("#SltCategorias").value;
+        let pelicula = document.querySelector("#InpPeliculaAgregar").value;
+        let fecha = document.querySelector("#InpFechaPelAgregar").value;
+        let inpComentario = document.querySelector("#InpComentario").value;
         if (!ValidarAgregarPelicula(idCat, pelicula, fecha, inpComentario)) { return; }
 
 
@@ -158,9 +158,9 @@ async function AgregarPeliculas() {
                 "Authorization": `Bearer ${token}`
             },
             body: JSON.stringify({
-                "idCategoria": idCat,
-                "nombre": pelicula.trim(),
-                "fecha": fecha
+                idCategoria: idCat,
+                nombre: pelicula.trim(),
+                fechaEstreno: fecha
             })
         });
         if (response.status === 401) {
@@ -175,10 +175,12 @@ async function AgregarPeliculas() {
             mostrarMensaje(data.mensaje, "Pelicula agregada correctamente :)")
         }
         console.log(data);
-
-
+        idCat.value = null;
+        inpComentario.value = null;
+        pelicula.value = null;
+        fecha.value = null;
     } catch (error) {
-        mostrarMensaje("Error cargando pelicula", error);
+        mostrarMensaje("Error cargando pelicula" || error);
     }
 }
 
@@ -205,6 +207,148 @@ function ValidarAgregarPelicula(idCat, pelicula, fecha, inpComentario) {
 
     return true;
 }
+
+async function CategoriasPeliculas() {
+    try {
+        if (!VerificarSesion()) return;
+
+        const response = await fetch(URL_Base + '/categorias', {
+            method: "GET",
+            headers: {
+                'Content-Type': 'application/json',
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (response.status === 401) {
+            mostrarMensaje("Sesión expirada. Inicie sesión nuevamente.");
+            Logout();
+            return;
+        }
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            mostrarMensaje(data.error, "Error al cargar las categorias de peliculas");
+            return;
+        }
+
+        return data.categorias;
+    } catch (error) {
+
+    }
+}
+
+async function ListarPeliculas() {
+    try {
+        if (!VerificarSesion()) return;
+
+        let CatPeliculas = await CategoriasPeliculas() || [];
+        const response = await fetch(URL_Base + '/peliculas', {
+            method: "GET",
+            headers: {
+                'Content-Type': 'application/json',
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (response.status === 401) {
+            mostrarMensaje("Sesión expirada. Inicie sesión nuevamente.");
+            Logout();
+            return;
+        }
+
+        const data = await response.json();
+        let peliculas = data.peliculas;
+
+        if (!response.ok) {
+            mostrarMensaje(data.error || "Error al cargar la lista de peliculas");
+            return;
+        }
+
+        let cards = '';
+
+        peliculas.forEach((pelicula) => {
+            let IdCat = pelicula.idCategoria
+            let FindCat = CatPeliculas.find(c => c.id == IdCat)
+            console.log(FindCat);
+            let CatNombre = "";
+            let CatEmoji = "";
+            if (FindCat) {
+                CatNombre = FindCat.nombre;
+                CatEmoji = FindCat.emoji;
+            }
+
+            cards += `
+    <ion-card>
+        <ion-card-header>
+
+            <ion-item lines="none">
+                <ion-label>
+                    <ion-card-title>${pelicula.nombre}</ion-card-title>
+                </ion-label>
+
+                <ion-button 
+                    fill="clear" 
+                    color="danger"
+                    slot="end"
+                    onclick="EliminarPelicula(${pelicula.id})">
+                    <ion-icon name="trash-outline"></ion-icon>
+                </ion-button>
+            </ion-item>
+
+        </ion-card-header>
+
+        <ion-card-content>
+            <p>Categoria: ${CatNombre + ' - ' + CatEmoji}</p>
+            <p>Fecha de estreno: ${pelicula.fechaEstreno}</p>
+        </ion-card-content>
+    </ion-card>
+`;
+        })
+
+
+        document.querySelector("#ListaPeliculas").innerHTML = cards;
+        // container.innerHTML = '';
+
+    } catch (error) {
+        mostrarMensaje("Error cargando lista de pelicula" || error);
+        console.log(error)
+    }
+}
+
+
+async function EliminarPelicula(id) {
+    try {
+        if (!VerificarSesion()) return;
+        const response = await fetch(URL_Base + '/peliculas', {
+            method: "DELETE",
+            headers: {
+                'Content-Type': 'application/json',
+                "Authorization": `Bearer ${token}`
+            }
+        });
+        
+
+
+        if (response.status === 401) {
+            mostrarMensaje("Sesión expirada. Inicie sesión nuevamente.");
+            Logout();
+            return;
+        }
+
+        const data = await response.json();
+        let peliculas = data.peliculas;
+
+        if (!response.ok) {
+            mostrarMensaje(data.error || "Error intentar eliminar una pelicula");
+            return;
+        }
+    } catch (error) {
+        mostrarMensaje("Error Al intentar eliminar una pelicula" || error);
+        console.log(error)
+    }
+}
 //#endregion
 
 
@@ -228,6 +372,10 @@ function navegar(evt) {
             ListarCategoriasPeliculas();
             document.querySelector("#page-AltaPelicula").style.display = "block";
             break;
+        case "/ListarPeliculas":
+            ListarPeliculas();
+            document.querySelector("#page-ListarPeliculas").style.display = "block";
+            break;
         case "/MapaUsuarios":
             // MostrarMapaUsuarios();
             document.querySelector("#page-Mapa").style.display = "block";
@@ -243,6 +391,7 @@ function navegar(evt) {
 function MostrarMenuLogueado() {
     document.querySelector("#BtnMenuNavLogOut").style.display = "block";
     document.querySelector("#BtnMenuNavAltaPelicula").style.display = "block";
+    document.querySelector("#BtnMenuNavListarPelicula").style.display = "block";
     document.querySelector("#BtnMenuNavMapaUsuarios").style.display = "block";
     document.querySelector("#BtnMenuNavLogin").style.display = "none";
     document.querySelector("#BtnMenuNavRegistro").style.display = "none";
@@ -252,6 +401,7 @@ function mostrarMenuNoLogeado() {
     document.querySelector("#BtnMenuNavRegistro").style.display = "block";
     document.querySelector("#BtnMenuNavLogOut").style.display = "none";
     document.querySelector("#BtnMenuNavAltaPelicula").style.display = "none";
+    document.querySelector("#BtnMenuNavListarPelicula").style.display = "none";
     document.querySelector("#BtnMenuNavMapaUsuarios").style.display = "none";
 }
 function CerrarMenu() {

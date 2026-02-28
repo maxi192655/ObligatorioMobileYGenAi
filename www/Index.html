@@ -20,6 +20,7 @@
             <ion-route url="/Login" component="page-login"></ion-route>
             <ion-route url="/Registro" component="page-registro"></ion-route>
             <ion-route url="/AgregarUnaPelícula" component="page-altapelicula"></ion-route>
+            <ion-route url="/ListarPeliculas" component="page-ListarPeliculas"></ion-route>
             <ion-route url="/MapaUsuarios" component="page-page-Mapa"></ion-route>
             <style>
                 #map {
@@ -51,6 +52,9 @@
                     </ion-item>
                     <ion-item href="/AgregarUnaPelícula" id="BtnMenuNavAltaPelicula" onclick="CerrarMenu()">
                         <ion-label>Agregar una película</ion-label>
+                    </ion-item>
+                    <ion-item href="/ListarPeliculas" id="BtnMenuNavListarPelicula" onclick="CerrarMenu()">
+                        <ion-label>Lista de peliculas</ion-label>
                     </ion-item>
                     <ion-item href="/MapaUsuarios" id="BtnMenuNavMapaUsuarios" onclick="CerrarMenu()">
                         <ion-label>Mapa de usuarios</ion-label>
@@ -160,8 +164,8 @@
                         </ion-item>
 
                         <ion-item>
-                            <ion-textarea id="InpComentario" label="Comentario" placeholder="Agregue un comentario" auto-grow="true"
-                                label-placement="floating" fill="outline" value="">
+                            <ion-textarea id="InpComentario" label="Comentario" placeholder="Agregue un comentario"
+                                auto-grow="true" label-placement="floating" fill="outline" value="">
                             </ion-textarea>
                         </ion-item>
                         <ion-item slot="start">
@@ -172,6 +176,23 @@
             </ion-content>
         </ion-page>
 
+        <ion-page class="ion-page" id="page-ListarPeliculas">
+            <ion-header>
+                <ion-toolbar>
+                    <ion-buttons slot="start">
+                        <ion-menu-button></ion-menu-button>
+                    </ion-buttons>
+                    <ion-title>Listado de pelicula</ion-title>
+                </ion-toolbar>
+            </ion-header>
+            <ion-content id="ListaPeliculas">
+                <!-- <ion-list>
+                    <ion-list>
+                        
+                    </ion-list>
+                </ion-list> -->
+            </ion-content>
+        </ion-page>
         <ion-page class="ion-page" id="page-Mapa">
             <ion-header>
                 <ion-toolbar>
