@@ -5,21 +5,31 @@ const menu = document.querySelector("#menu");
 let latitud;
 let longitud;
 let map;
-
-
+// window.addEventListener("load", Inicializar);
 Inicializar();
 // #region Inicializacion de la app y navegacion
 function Inicializar() {
 
-    //obtener token sel login o guardado
     token = localStorage.getItem("token");
-
-    //ocultar pantallas iniciales
+    console.log(token)
+    if (token !=null && token !== "") {
+        setTimeout(() => {
+            ruteo.push("/");
+            
+        }, 60);
+        //Usuario logeado
+        MostrarMenuLogueado();
+    } else{
+        //Usuario No Logueado
+        mostrarMenuNoLogeado();
+        setTimeout(() => {
+            ruteo.push("/Login");
+            
+        }, 60);
+    }
+    
     OcultarPantallas();
-
-    //Eventos de pagina y botones
     AgregarEventos();
-
 }
 
 function OcultarPantallas() {
@@ -119,10 +129,11 @@ function navegar(evt) {
             document.querySelector("#page-Home").style.display = "block";
             break;
         case "/Login":
-            listarTodosPaises();
             document.querySelector("#page-Login").style.display = "block";
             break;
-        case "/Registro": document.querySelector("#page-Registro").style.display = "block";
+        case "/Registro":
+            listarTodosPaises();
+            document.querySelector("#page-Registro").style.display = "block";
             break;
         case "/AgregarUnaPelícula":
             ListarCategoriasPeliculas();
@@ -143,6 +154,7 @@ function navegar(evt) {
 function MostrarMenuLogueado() {
     document.querySelector("#BtnMenuNavLogOut").style.display = "block";
     document.querySelector("#BtnMenuNavAltaPelicula").style.display = "block";
+    document.querySelector("#BtnMenuNavMapaUsuarios").style.display = "block";
     document.querySelector("#BtnMenuNavLogin").style.display = "none";
     document.querySelector("#BtnMenuNavRegistro").style.display = "none";
 }
@@ -150,7 +162,8 @@ function mostrarMenuNoLogeado() {
     document.querySelector("#BtnMenuNavLogin").style.display = "block";
     document.querySelector("#BtnMenuNavRegistro").style.display = "block";
     document.querySelector("#BtnMenuNavLogOut").style.display = "none";
-    document.querySelector("#BtnMenuNavAltaPelicula").style.display = "None";
+    document.querySelector("#BtnMenuNavAltaPelicula").style.display = "none";
+    document.querySelector("#BtnMenuNavMapaUsuarios").style.display = "none";
 }
 function CerrarMenu() {
     menu.close();
@@ -189,10 +202,7 @@ async function Registro() {
         ruteo.push("/")
 
         mostrarMensaje("Registro exitoso!");
-        // localStorage.setItem("token", data.token);
-        // console.log(localStorage.getItem("token"))
 
-        // console.log(data);
     } catch (error) {
         console.error("Error en el registro", error)
     }
@@ -320,6 +330,8 @@ function MostrarMapaUsuarios() {
             maxZoom: 19,
             attribution: '© OpenStreetMap'
         }).addTo(map);
+        var marker = L.marker([latitud, longitud]).addTo(map);
+        marker.bindPopup("<b>Hola!</b><br>Usted es el usuarioPrincipaL!").openPopup();
         var marker = L.marker([-34.894517716076805, -56.15253906600995]).addTo(map);
         marker.bindPopup("<b>Hola!</b><br>Soy el punto 1").openPopup();
         var marker = L.marker([-34.8847165448899, -56.16800846177113]).addTo(map);
