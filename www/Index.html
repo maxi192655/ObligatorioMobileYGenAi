@@ -146,9 +146,26 @@
                 <ion-list>
                     <ion-list>
                         <ion-item>
+                            <ion-input label="NombrePelicular" placeholder="Pelicula"
+                                id="InpPeliculaAgregar"></ion-input>
+                        </ion-item>
+
+                        <ion-item>
+                            <ion-input label="Fecha" type="date" value="" id="InpFechaPelAgregar"></ion-input>
+                        </ion-item>
+                        <ion-item>
                             <ion-select aria-label="Fruit" interface="modal" placeholder="Seleccione una categoria"
                                 id="SltCategorias">
                             </ion-select>
+                        </ion-item>
+
+                        <ion-item>
+                            <ion-textarea id="InpComentario" label="Comentario" placeholder="Agregue un comentario" auto-grow="true"
+                                label-placement="floating" fill="outline" value="">
+                            </ion-textarea>
+                        </ion-item>
+                        <ion-item slot="start">
+                            <ion-button color="primary" id="BtnAltaPelicula">Agregar</ion-button>
                         </ion-item>
                     </ion-list>
                 </ion-list>

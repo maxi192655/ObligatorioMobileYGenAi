@@ -11,23 +11,23 @@ Inicializar();
 function Inicializar() {
 
     token = localStorage.getItem("token");
-    console.log(token)
-    if (token !=null && token !== "") {
+    // console.log(token)
+    if (token != null && token !== "") {
         setTimeout(() => {
             ruteo.push("/");
-            
+
         }, 60);
         //Usuario logeado
         MostrarMenuLogueado();
-    } else{
+    } else {
         //Usuario No Logueado
         mostrarMenuNoLogeado();
         setTimeout(() => {
             ruteo.push("/Login");
-            
+
         }, 60);
     }
-    
+
     OcultarPantallas();
     AgregarEventos();
 }
@@ -43,6 +43,7 @@ function AgregarEventos() {
     ruteo.addEventListener("ionRouteWillChange", navegar);
     document.querySelector("#BtnRegistrar").addEventListener("click", Registro);
     document.querySelector("#BtnLogin").addEventListener("click", login);
+    document.querySelector("#BtnAltaPelicula").addEventListener("click", AgregarPeliculas);
 }
 
 function VerificarSesion() {
@@ -83,12 +84,10 @@ async function listarTodosPaises() {
     }
 }
 
-
+//#region Peliculas
 async function ListarCategoriasPeliculas() {
     try {
-        if (!VerificarSesion()) {
-            return;
-        }
+        if (!VerificarSesion()) return;
 
         const response = await fetch(URL_Base + '/categorias', {
             method: "GET",
@@ -97,9 +96,16 @@ async function ListarCategoriasPeliculas() {
                 "Authorization": `Bearer ${token}`
             }
         });
+
+        if (response.status === 401) {
+            mostrarMensaje("Sesión expirada. Inicie sesión nuevamente.");
+            Logout();
+            return;
+        }
+
         const data = await response.json();
-        console.log(response.status);
-        console.log(data);
+        // console.log(response.status);
+        // console.log(data);
         if (!response.ok) {
             mostrarMensaje(data.error, "Error al cargar las categorias de peliculas");
             return;
@@ -119,6 +125,89 @@ async function ListarCategoriasPeliculas() {
         mostrarMensaje("Error cargando categorias", error);
     }
 }
+
+async function AgregarPeliculas() {
+    try {
+        const idCat = document.querySelector("#SltCategorias").value;
+        const pelicula = document.querySelector("#InpPeliculaAgregar").value;
+        const fecha = document.querySelector("#InpFechaPelAgregar").value;
+        const inpComentario = document.querySelector("#InpComentario").value;
+        if (!ValidarAgregarPelicula(idCat, pelicula, fecha, inpComentario)) { return; }
+
+
+        const responseAI = await fetch(URL_Base + '/genai', {
+            method: "POST",
+            body: JSON.stringify({
+                prompt: inpComentario
+            })
+        });
+        const dataIA = await responseAI.json();
+        if (!responseAI.ok) {
+            mostrarMensaje(dataIA.error || "Error al procesar el comentario" || dataIA.mensaje);
+        }
+
+        if (dataIA.sentiment === 'Negativo') {
+            mostrarMensaje("No se puede registrar una pelicula con comentario negatio.");
+            return;
+        }
+        // console.log(dataIA);
+        const response = await fetch(URL_Base + '/peliculas', {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json',
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                "idCategoria": idCat,
+                "nombre": pelicula.trim(),
+                "fecha": fecha
+            })
+        });
+        if (response.status === 401) {
+            mostrarMensaje("Sesión expirada. Inicie sesión nuevamente.");
+            Logout();
+            return;
+        }
+        const data = await response.json();
+        if (!response.ok) {
+            mostrarMensaje(data.error || "Error al intentar agregar la pelicula.")
+        } else {
+            mostrarMensaje(data.mensaje, "Pelicula agregada correctamente :)")
+        }
+        console.log(data);
+
+
+    } catch (error) {
+        mostrarMensaje("Error cargando pelicula", error);
+    }
+}
+
+function ValidarAgregarPelicula(idCat, pelicula, fecha, inpComentario) {
+
+    if (!idCat) {
+        mostrarMensaje("Debe seleccionar una categoría");
+        return false;
+    }
+
+    if (!pelicula || pelicula.trim() === "") {
+        mostrarMensaje("Debe ingresar el nombre de la película");
+        return false;
+    }
+
+    if (!fecha) {
+        mostrarMensaje("Debe ingresar una fecha");
+        return false;
+    }
+    if (!inpComentario || inpComentario.trim() === "") {
+        mostrarMensaje("Debe ingresar un comentario");
+        return false;
+    }
+
+    return true;
+}
+//#endregion
+
+
 //#region navegar
 function navegar(evt) {
     // console.log(evt.detail.to);
@@ -181,19 +270,19 @@ async function Registro() {
 
         if (!ValidarRegistro(usuario, pwd, Idpais)) {
             return;
+        } else {
+            const response = await fetch(URL_Base + '/usuarios', {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    usuario: usuario,
+                    password: pwd,
+                    idPais: Idpais
+                })
+            });
         }
-        const response = await fetch(URL_Base + '/usuarios', {
-            method: "POST",
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                usuario: usuario,
-                password: pwd,
-                idPais: Idpais
-            })
-        });
-
         const data = await response.json();
         if (!response.ok) {
             mostrarMensaje(data.mensaje || "Error en el registro");
@@ -244,32 +333,33 @@ async function login() {
         const pwdLog = document.querySelector("#InpPWDLogin").value;
         if (!ValidarLogin(usuarioLog, pwdLog)) {
             return;
+        } else {
+            const response = await fetch(URL_Base + '/login', {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    usuario: usuarioLog,
+                    password: pwdLog
+                })
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                mostrarMensaje(data.mensaje || "Error en el login");
+                return;
+            }
+
+            localStorage.setItem("token", data.token);
+            token = data.token;
+            document.querySelector("#InpUsuarioLogin").value = "";
+            document.querySelector("#InpPWDLogin").value = "";
+            MostrarMenuLogueado();
+            mostrarMensaje("Bienvenido!");
+
+            ruteo.push("/");
         }
-        const response = await fetch(URL_Base + '/login', {
-            method: "POST",
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                usuario: usuarioLog,
-                password: pwdLog
-            })
-        });
-
-        const data = await response.json();
-        if (!response.ok) {
-            mostrarMensaje(data.mensaje || "Error en el login");
-            return;
-        }
-
-        localStorage.setItem("token", data.token);
-        token = data.token;
-        document.querySelector("#InpUsuarioLogin").value = "";
-        document.querySelector("#InpPWDLogin").value = "";
-        MostrarMenuLogueado();
-        mostrarMensaje("Bienvenido!");
-
-        ruteo.push("/");
     } catch (error) {
         console.log("Error en el login", error);
         mostrarMensaje("Error de conexion");
@@ -289,6 +379,7 @@ function ValidarLogin(usuario, password) {
 }
 
 function Logout() {
+    localStorage.clear();
     localStorage.removeItem("token");
     token = null;
     mostrarMenuNoLogeado();
