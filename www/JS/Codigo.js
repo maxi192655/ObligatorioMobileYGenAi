@@ -6,10 +6,12 @@ let latitud;
 let longitud;
 let map;
 let Peliculas = [];
+let categorias = [];
+let paises = [];
 
 // window.addEventListener("load", Inicializar);
 Inicializar();
-// #region Inicializacion de la app y navegacion
+// #region Inicializacion de la app
 function Inicializar() {
 
     token = localStorage.getItem("token");
@@ -20,6 +22,9 @@ function Inicializar() {
 
         }, 60);
         //Usuario logeado
+        ListarPeliculas();
+        ListarCategoriasPeliculas();
+        listarTodosPaises();
         MostrarMenuLogueado();
     } else {
         //Usuario No Logueado
@@ -80,7 +85,7 @@ async function listarTodosPaises() {
             option.textContent = pais.nombre;
             select.appendChild(option);
         });
-
+        return data.paises
     } catch (error) {
         mostrarMensaje("Error cargando países:", error);
     }
@@ -112,7 +117,7 @@ async function ListarCategoriasPeliculas() {
             mostrarMensaje(data.error, "Error al cargar las categorias de peliculas");
             return;
         }
-
+        categorias = data.categorias;
         const slt = document.querySelector("#SltCategorias");
         slt.innerHTML = "";
 
@@ -176,7 +181,8 @@ async function AgregarPeliculas() {
         } else {
             mostrarMensaje(data.mensaje, "Pelicula agregada correctamente :)")
         }
-        console.log(data);
+        // console.log(data);
+        ListarPeliculas();
         idCat.value = null;
         inpComentario.value = null;
         pelicula.value = null;
@@ -338,7 +344,7 @@ async function ListarPeliculas() {
 `;
         })
 
- cards += `
+        cards += `
         </ion-row>
     </ion-grid>
 `;
@@ -416,6 +422,11 @@ function navegar(evt) {
 
             }, 50);
             break;
+        case "/Estadisticas":
+            document.querySelector("#page-Estadisticas").style.display = "block";
+            mostrarEstadisticas();
+            // ListarCategoriasPeliculas();
+            break;
         case "/MapaUsuarios":
             // MostrarMapaUsuarios();
             document.querySelector("#page-Mapa").style.display = "block";
@@ -432,6 +443,7 @@ function MostrarMenuLogueado() {
     document.querySelector("#BtnMenuNavLogOut").style.display = "block";
     document.querySelector("#BtnMenuNavAltaPelicula").style.display = "block";
     document.querySelector("#BtnMenuNavListarPelicula").style.display = "block";
+    document.querySelector("#BtnMenuNavEstadisticas").style.display = "block";
     document.querySelector("#BtnMenuNavMapaUsuarios").style.display = "block";
     document.querySelector("#BtnMenuNavLogin").style.display = "none";
     document.querySelector("#BtnMenuNavRegistro").style.display = "none";
@@ -440,6 +452,7 @@ function mostrarMenuNoLogeado() {
     document.querySelector("#BtnMenuNavLogin").style.display = "block";
     document.querySelector("#BtnMenuNavRegistro").style.display = "block";
     document.querySelector("#BtnMenuNavLogOut").style.display = "none";
+    document.querySelector("#BtnMenuNavEstadisticas").style.display = "none";
     document.querySelector("#BtnMenuNavAltaPelicula").style.display = "none";
     document.querySelector("#BtnMenuNavListarPelicula").style.display = "none";
     document.querySelector("#BtnMenuNavMapaUsuarios").style.display = "none";
@@ -458,21 +471,19 @@ async function Registro() {
         const pwd = document.querySelector("#InpPWD").value;
         const Idpais = document.querySelector("#SltPais").value;
 
-        if (!ValidarRegistro(usuario, pwd, Idpais)) {
-            return;
-        } else {
-            const response = await fetch(URL_Base + '/usuarios', {
-                method: "POST",
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    usuario: usuario,
-                    password: pwd,
-                    idPais: Idpais
-                })
-            });
-        }
+        if (!ValidarRegistro(usuario, pwd, Idpais)) { return }
+        const response = await fetch(URL_Base + '/usuarios', {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                usuario: usuario,
+                password: pwd,
+                idPais: Idpais
+            })
+        });
+
         const data = await response.json();
         if (!response.ok) {
             mostrarMensaje(data.mensaje || "Error en el registro");
@@ -579,10 +590,111 @@ function Logout() {
 
 //#endregion
 
+//#region Estadisticas
 
+function mostrarEstadisticas() {
+    try {
+        if (!VerificarSesion()) return;
+        if (!Peliculas || Peliculas.length === 0) {
+            mostrarMensaje("No hay películas registradas.");
+            return;
+        }
+        let totalP = Peliculas.length;
+        let conteoPorcategoria = {};
 
+        Peliculas.forEach(p => {
+            if (!conteoPorcategoria[p.idCategoria]) {
+                conteoPorcategoria[p.idCategoria] = 0
+            }
+            conteoPorcategoria[p.idCategoria]++;
+        });
+
+        let html = `<ion-card><ion-card-header><ion-card-title>Películas por categoría. Total:${totalP}</ion-card-title></ion-card-header><ion-card-content>`;
+        categorias.forEach(cat => {
+            let cantidad = conteoPorcategoria[cat.id] || 0;
+
+            html += `
+            <p>${cat.nombre} ${cat.emoji || ""} : <strong>${cantidad}</strong></p>
+        `;
+        });
+
+        html += "</ion-card-content></ion-card>";
+
+        let mayores12 = 0;
+        let menores12 = 0;
+
+        Peliculas.forEach(p => {
+
+            let categoria = categorias.find(c => c.id == p.idCategoria);
+
+            if (!categoria) return;
+
+            if (categoria.edad_requerida >= 12) {
+                mayores12++;
+            } else {
+                menores12++;
+            }
+        });
+
+        let total = Peliculas.length;
+
+        let porcentajeMayores = ((mayores12 / total) * 100).toFixed(1);
+        let porcentajeMenores = ((menores12 / total) * 100).toFixed(1);
+
+        html += `
+        <ion-card>
+            <ion-card-header>
+                <ion-card-title>Clasificación por edad registradas.</ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+                <p>Mayores de 12 años: <strong>${porcentajeMayores}%</strong></p>
+                <p>Resto: <strong>${porcentajeMenores}%</strong></p>
+            </ion-card-content>
+        </ion-card>
+    `;
+
+        document.querySelector("#ContenedorEstadisticas").innerHTML = html;
+
+    } catch (error) {
+        mostrarMensaje(error);
+    }
+}
+
+//#endregion
 
 //#region Mapa
+
+async function UsuariosPorPais() {
+    try {
+        if (!VerificarSesion()) return;
+
+        const response = await fetch(URL_Base + "/usuariosPorPais", {
+            method: "GET",
+            headers: {
+                'Content-Type': 'application/json',
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (response.status === 401) {
+            mostrarMensaje("Sesión expirada. Inicie sesión nuevamente.");
+            Logout();
+            return;
+        }
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            mostrarError(data.error);
+            return;
+        }
+
+        return data.paises;
+    } catch (error) {
+        mostrarMensaje(error);
+    }
+}
+
 function getLocation() {
     if (!navigator.geolocation) {
         mostrarMensaje("La geolocalización no está soportada en este navegador");
@@ -601,28 +713,67 @@ function getLocation() {
 }
 
 
-function MostrarMapaUsuarios() {
-    if (typeof latitud === "number" && typeof longitud === "number") {
-        if (map) {
-            map.remove();
-        }
-        map = L.map('map').setView([latitud, longitud], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
-        var marker = L.marker([latitud, longitud]).addTo(map);
-        marker.bindPopup("<b>Hola!</b><br>Usted es el usuarioPrincipaL!").openPopup();
-        var marker = L.marker([-34.894517716076805, -56.15253906600995]).addTo(map);
-        marker.bindPopup("<b>Hola!</b><br>Soy el punto 1").openPopup();
-        var marker = L.marker([-34.8847165448899, -56.16800846177113]).addTo(map);
-        marker.bindPopup("<b>Hola!</b><br>Soy el punto 2").openPopup();
-        var marker = L.marker([-34.90678678949317, -56.17306564853651]).addTo(map);
-        marker.bindPopup("<b>Hola!</b><br>Soy el punto 3").openPopup();
-    } else {
-        mostrarMensaje("Coordenadas incorrectas")
+// function MostrarMapaUsuarios() {
+//     if (typeof latitud === "number" && typeof longitud === "number") {
+//         if (map) {
+//             map.remove();
+//         }
+//         map = L.map('map').setView([latitud, longitud], 13);
+//         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+//             maxZoom: 19,
+//             attribution: '© OpenStreetMap'
+//         }).addTo(map);
+//         var marker = L.marker([latitud, longitud]).addTo(map);
+//         marker.bindPopup("<b>Hola!</b><br>Usted es el usuarioPrincipaL!").openPopup();
+//         var marker = L.marker([-34.894517716076805, -56.15253906600995]).addTo(map);
+//         marker.bindPopup("<b>Hola!</b><br>Soy el punto 1").openPopup();
+//         var marker = L.marker([-34.8847165448899, -56.16800846177113]).addTo(map);
+//         marker.bindPopup("<b>Hola!</b><br>Soy el punto 2").openPopup();
+//         var marker = L.marker([-34.90678678949317, -56.17306564853651]).addTo(map);
+//         marker.bindPopup("<b>Hola!</b><br>Soy el punto 3").openPopup();
+//     } else {
+//         mostrarMensaje("Coordenadas incorrectas")
+//     }
+// }
+
+async function MostrarMapaUsuarios() {
+
+    if (!VerificarSesion()) return;
+
+    const usuariosPais = await UsuariosPorPais();
+    const paises = await listarTodosPaises(); // ← ESTA FUNCIÓN TENÉS QUE TENERLA
+    console.log(usuariosPais);
+    console.log(paises);
+    if (!usuariosPais || !paises) return;
+
+    if (map) {
+        map.remove();
     }
+
+    map = L.map('map').setView([20, 0], 2);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 5
+    }).addTo(map);
+
+    usuariosPais
+        .sort((a, b) => b.cantidadDeUsuarios - a.cantidadDeUsuarios)
+        .slice(0, 10)
+        .forEach(paisAPI => {
+
+            let paisCompleto = paises.find(p => p.id == paisAPI.id);
+
+            if (!paisCompleto) return;
+
+            L.marker([paisCompleto.latitud, paisCompleto.longitud])
+                .addTo(map)
+                .bindTooltip(
+                    `${paisCompleto.nombre}: ${paisAPI.cantidadDeUsuarios} usuarios`
+                );
+        });
 }
+
+
 
 function guardarUbicacion(position) {
     latitud = position.coords.latitude;
