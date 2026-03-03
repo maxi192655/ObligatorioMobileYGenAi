@@ -2,12 +2,12 @@ let token = "";
 const ruteo = document.querySelector("#ruteo");
 const URL_Base = "https://movielist.develotion.com"
 const menu = document.querySelector("#menu");
-let latitud;
-let longitud;
+let latitud = -34.9011;   // Montevideo
+let longitud = -56.1645;
 let map;
-let Peliculas = [];
-let categorias = [];
-let paises = [];
+// let Peliculas = [];
+// // let categorias = [];
+// let paises = [];
 
 // window.addEventListener("load", Inicializar);
 Inicializar();
@@ -21,10 +21,7 @@ function Inicializar() {
             ruteo.push("/");
 
         }, 60);
-        //Usuario logeado
-        ListarPeliculas();
-        ListarCategoriasPeliculas();
-        listarTodosPaises();
+        //Usuario logeado        
         MostrarMenuLogueado();
     } else {
         //Usuario No Logueado
@@ -61,6 +58,54 @@ function VerificarSesion() {
     }
     return true;
 }
+
+//#region navegar
+function navegar(evt) {
+    // console.log(evt.detail.to);
+    let paginaTo = evt.detail.to;
+    OcultarPantallas();
+    switch (paginaTo) {
+        case "/":
+            document.querySelector("#page-Home").style.display = "block";
+            break;
+        case "/Login":
+            document.querySelector("#page-Login").style.display = "block";
+            break;
+        case "/Registro":
+            document.querySelector("#page-Registro").style.display = "block";
+            listarTodosPaises();
+            break;
+        case "/AgregarUnaPelícula":
+            ListarCategoriasPeliculas();
+            document.querySelector("#page-AltaPelicula").style.display = "block";
+            break;
+        case "/ListarPeliculas":
+            setTimeout(() => {
+                ListarPeliculas();
+                const select = document.querySelector("#SltFiltroFecha");
+                select.addEventListener("ionChange", () => {
+                    ListarPeliculas();
+                });
+            }, 50);
+            document.querySelector("#page-ListarPeliculas").style.display = "block";
+            break;
+        case "/Estadisticas":
+            mostrarEstadisticas();
+            document.querySelector("#page-Estadisticas").style.display = "block";
+            // ListarCategoriasPeliculas();
+            break;
+        case "/MapaUsuarios":
+            // MostrarMapaUsuarios();
+            document.querySelector("#page-Mapa").style.display = "block";
+            getLocation();
+            break;
+        default: document.querySelector("#page-Login").style.display = "block";
+            break;
+    }
+
+}
+//#endregion
+
 //#endregion
 async function listarTodosPaises() {
     try {
@@ -117,7 +162,7 @@ async function ListarCategoriasPeliculas() {
             mostrarMensaje(data.error, "Error al cargar las categorias de peliculas");
             return;
         }
-        categorias = data.categorias;
+        //categorias = data.categorias;
         const slt = document.querySelector("#SltCategorias");
         slt.innerHTML = "";
 
@@ -127,7 +172,7 @@ async function ListarCategoriasPeliculas() {
             opt.textContent = categoria.nombre
             slt.appendChild(opt);
         });
-
+        return data.categorias;
     } catch (error) {
         mostrarMensaje("Error cargando categorias", error);
     }
@@ -139,8 +184,8 @@ async function AgregarPeliculas() {
         let pelicula = document.querySelector("#InpPeliculaAgregar").value;
         let fecha = document.querySelector("#InpFechaPelAgregar").value;
         let inpComentario = document.querySelector("#InpComentario").value;
-        if (!ValidarAgregarPelicula(idCat, pelicula, fecha, inpComentario)) { return; }
 
+        if (!ValidarAgregarPelicula(idCat, pelicula, fecha, inpComentario)) { return; }
 
         const responseAI = await fetch(URL_Base + '/genai', {
             method: "POST",
@@ -148,11 +193,12 @@ async function AgregarPeliculas() {
                 prompt: inpComentario
             })
         });
+
         const dataIA = await responseAI.json();
+
         if (!responseAI.ok) {
             mostrarMensaje(dataIA.error || "Error al procesar el comentario" || dataIA.mensaje);
         }
-
         if (dataIA.sentiment === 'Negativo') {
             mostrarMensaje("No se puede registrar una pelicula con comentario negatio.");
             return;
@@ -181,12 +227,8 @@ async function AgregarPeliculas() {
         } else {
             mostrarMensaje(data.mensaje, "Pelicula agregada correctamente :)")
         }
-        // console.log(data);
-        ListarPeliculas();
-        idCat.value = null;
-        inpComentario.value = null;
-        pelicula.value = null;
-        fecha.value = null;
+
+        ruteo.push("ListarPeliculas");
     } catch (error) {
         mostrarMensaje("Error cargando pelicula" || error);
     }
@@ -273,30 +315,34 @@ async function ListarPeliculas() {
             return;
         }
 
-        Peliculas = data.peliculas;
+        let Peliculas = data.peliculas;
 
         const sltFiltro = document.querySelector("#SltFiltroFecha").value;
         let peliculasAMostrar = Peliculas;
 
         if (sltFiltro && sltFiltro !== "todas") {
+
             const hoy = new Date();
 
             peliculasAMostrar = Peliculas.filter(p => {
-                const fechaPelicula = new Date(p.fechaEstreno);
+
+                // 👉 Parse manual para evitar problema UTC
+                const [year, month, day] = p.fechaEstreno.split("-");
+                const fechaPelicula = new Date(year, month - 1, day);
 
                 if (sltFiltro === "semana") {
-                    const limite = new Date();
-                    limite.setDate(hoy.getDate() - 7);
+                    const limite = new Date(hoy.getTime() - (7 * 24 * 60 * 60 * 1000));
                     return fechaPelicula >= limite;
                 }
 
                 if (sltFiltro === "mes") {
-                    const limite = new Date();
-                    limite.setMonth(hoy.getMonth() - 1);
+                    const limite = new Date(hoy.getTime() - (30 * 24 * 60 * 60 * 1000));
                     return fechaPelicula >= limite;
                 }
+
                 return true;
             });
+
 
         }
 
@@ -317,7 +363,7 @@ async function ListarPeliculas() {
             }
 
             cards += `
-    <ion-card>
+    <ion-card style="padding-bottom: 50px">
         <ion-card-header>
 
             <ion-item lines="none">
@@ -349,8 +395,7 @@ async function ListarPeliculas() {
     </ion-grid>
 `;
         document.querySelector("#ListaPeliculas").innerHTML = cards;
-        // container.innerHTML = '';
-
+        return Peliculas;
     } catch (error) {
         mostrarMensaje("Error cargando lista de pelicula" || error);
         // console.log(error)
@@ -387,57 +432,6 @@ async function EliminarPelicula(id) {
 }
 //#endregion
 
-
-//#region navegar
-function navegar(evt) {
-    // console.log(evt.detail.to);
-    let paginaTo = evt.detail.to;
-    OcultarPantallas();
-    switch (paginaTo) {
-        case "/":
-            document.querySelector("#page-Home").style.display = "block";
-            break;
-        case "/Login":
-            document.querySelector("#page-Login").style.display = "block";
-            break;
-        case "/Registro":
-            document.querySelector("#page-Registro").style.display = "block";
-            listarTodosPaises();
-            break;
-        case "/AgregarUnaPelícula":
-            document.querySelector("#page-AltaPelicula").style.display = "block";
-            ListarCategoriasPeliculas();
-            break;
-        case "/ListarPeliculas":
-            document.querySelector("#page-ListarPeliculas").style.display = "block";
-            // ListarPeliculas();
-            setTimeout(() => {
-                ListarPeliculas();
-
-                const select = document.querySelector("#SltFiltroFecha");
-
-                select.addEventListener("ionChange", () => {
-                    ListarPeliculas();
-                });
-
-            }, 50);
-            break;
-        case "/Estadisticas":
-            document.querySelector("#page-Estadisticas").style.display = "block";
-            mostrarEstadisticas();
-            // ListarCategoriasPeliculas();
-            break;
-        case "/MapaUsuarios":
-            // MostrarMapaUsuarios();
-            document.querySelector("#page-Mapa").style.display = "block";
-            getLocation();
-            break;
-        default: document.querySelector("#page-Login").style.display = "block";
-            break;
-    }
-
-}
-//#endregion
 //#region Mostrar menus segun sesion
 function MostrarMenuLogueado() {
     document.querySelector("#BtnMenuNavLogOut").style.display = "block";
@@ -592,16 +586,22 @@ function Logout() {
 
 //#region Estadisticas
 
-function mostrarEstadisticas() {
+async function mostrarEstadisticas() {
     try {
         if (!VerificarSesion()) return;
+        let Peliculas = await ListarPeliculas();
         if (!Peliculas || Peliculas.length === 0) {
             mostrarMensaje("No hay películas registradas.");
             return;
         }
+        let categorias = await ListarCategoriasPeliculas();
+        if (!categorias || categorias.length === 0) {
+            mostrarMensaje("No se pudieron cargar las categorias");
+            return;
+        }
+
         let totalP = Peliculas.length;
         let conteoPorcategoria = {};
-
         Peliculas.forEach(p => {
             if (!conteoPorcategoria[p.idCategoria]) {
                 conteoPorcategoria[p.idCategoria] = 0
@@ -609,7 +609,7 @@ function mostrarEstadisticas() {
             conteoPorcategoria[p.idCategoria]++;
         });
 
-        let html = `<ion-card><ion-card-header><ion-card-title>Películas por categoría. Total:${totalP}</ion-card-title></ion-card-header><ion-card-content>`;
+        let html = `<ion-card><ion-card-header><ion-card-title>Películas por categoría. Total: <b>${totalP}</b></ion-card-title></ion-card-header><ion-card-content>`;
         categorias.forEach(cat => {
             let cantidad = conteoPorcategoria[cat.id] || 0;
 
@@ -697,7 +697,7 @@ async function UsuariosPorPais() {
 
 function getLocation() {
     if (!navigator.geolocation) {
-        mostrarMensaje("La geolocalización no está soportada en este navegador");
+        MostrarMapaUsuarios();
         return;
     }
 
@@ -706,51 +706,26 @@ function getLocation() {
         mostrarError,
         {
             enableHighAccuracy: true,
-            timeout: 10000,
+            timeout: 1500,
             maximumAge: 0
         }
     );
 }
 
-
-// function MostrarMapaUsuarios() {
-//     if (typeof latitud === "number" && typeof longitud === "number") {
-//         if (map) {
-//             map.remove();
-//         }
-//         map = L.map('map').setView([latitud, longitud], 13);
-//         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-//             maxZoom: 19,
-//             attribution: '© OpenStreetMap'
-//         }).addTo(map);
-//         var marker = L.marker([latitud, longitud]).addTo(map);
-//         marker.bindPopup("<b>Hola!</b><br>Usted es el usuarioPrincipaL!").openPopup();
-//         var marker = L.marker([-34.894517716076805, -56.15253906600995]).addTo(map);
-//         marker.bindPopup("<b>Hola!</b><br>Soy el punto 1").openPopup();
-//         var marker = L.marker([-34.8847165448899, -56.16800846177113]).addTo(map);
-//         marker.bindPopup("<b>Hola!</b><br>Soy el punto 2").openPopup();
-//         var marker = L.marker([-34.90678678949317, -56.17306564853651]).addTo(map);
-//         marker.bindPopup("<b>Hola!</b><br>Soy el punto 3").openPopup();
-//     } else {
-//         mostrarMensaje("Coordenadas incorrectas")
-//     }
-// }
-
 async function MostrarMapaUsuarios() {
 
     if (!VerificarSesion()) return;
-
     const usuariosPais = await UsuariosPorPais();
-    const paises = await listarTodosPaises(); // ← ESTA FUNCIÓN TENÉS QUE TENERLA
-    console.log(usuariosPais);
-    console.log(paises);
+    const paises = await listarTodosPaises();
+    // console.log(usuariosPais);
+    // console.log(paises);
     if (!usuariosPais || !paises) return;
 
     if (map) {
         map.remove();
     }
 
-    map = L.map('map').setView([20, 0], 2);
+    map = L.map('map').setView([latitud, longitud], 2);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 5
@@ -778,21 +753,14 @@ async function MostrarMapaUsuarios() {
 function guardarUbicacion(position) {
     latitud = position.coords.latitude;
     longitud = position.coords.longitude;
-
-    console.log("Lat:", latitud);
-    console.log("Lng:", longitud);
-
-    MostrarMapaUsuarios(); // ← ESTA LINEA FALTABA
+    MostrarMapaUsuarios();
 
 }
 
-// function mostrarError(error) {
-//     mostrarMensaje(("Error:", error.message));
-// }
 function mostrarError(error) {
-    console.log("Código error:", error.code);
-    console.log("Mensaje:", error.message);
-    mostrarMensaje("Error geolocalización: " + error.message);
+    console.log(error.message);
+    mostrarMensaje("No se pudo obtener ubicación. Usando ubicación por defecto.");
+    MostrarMapaUsuarios();
 }
 
 
